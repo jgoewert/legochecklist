@@ -1,0 +1,172 @@
+{% load static %}
+
+{% block content %}
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <style>
+    body {
+      font-size: 100%;
+      padding-top: 1em;
+      margin-top: 0em;
+    }
+
+    .checkbox {
+      font-size: 120%
+    }
+
+    .piece {
+      float: left;
+      border: solid 1px;
+      padding: .3em;
+      margin: .1em;
+      page-break-inside: avoid;
+    }
+
+    .hiding {
+      opacity: 0;
+      -webkit-transform: rotate(180deg);
+      transform: rotate(180deg);
+      transition: opacity .6s, -webkit-transform 1s, transform 1s;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .reset {
+      clear: left;
+      margin-top: 2em;
+    }
+
+    .clearfix {
+      content: "";
+      clear: both;
+      display: table;
+    }
+
+    img {
+      max-height: 5em;
+    }
+
+    .topform {
+      width: 100%;
+      background-color: lightgray;
+    }
+
+    @media print {
+      .checkbox input {
+        display: none
+      }
+
+      .checkbox:after {
+        content: '□'
+      }
+
+      .reset {
+        display: none;
+      }
+
+      .topform {
+        display: none;
+      }
+    }
+
+    h1 {
+      margin: 0px;
+      padding: 0px;
+    }
+  </style>
+  <script>
+    function restore_checkbox_values() {
+      const checkboxes = document.getElementsByTagName('input');
+      for (var i = 0; i < checkboxes.length; i++) {
+        const key = 'brick-' + checkboxes[i].id;
+        if (key in localStorage && localStorage[key] === 'true') {
+          checkboxes[i].checked = localStorage[key];
+        }
+      }
+    }
+    function save_checkbox_value(checkbox) {
+      localStorage['brick-' + checkbox.id] = checkbox.checked;
+    }
+    function is_done(piece) {
+      return (Array.from(piece.childNodes)
+        .filter(e => e.hasChildNodes() &&
+          e.firstChild.nodeType == e.firstChild.ELEMENT_NODE &&
+          e.firstChild.getAttribute("type") == "checkbox")
+        .map(e => e.firstChild.checked)
+        .reduce((a, b) => a && b));
+    }
+    function hide_piece(piece) {
+      piece.classList.add("hiding");
+      setTimeout(function () { piece.classList.add("hidden"); }, 350)
+    }
+
+    function hide_if_done(piece) {
+      if (document.getElementById("hideondone").checked) {
+        if (is_done(piece)) {
+          hide_piece(piece);
+        }
+      }
+    }
+    function respond_to_change(checkbox) {
+      save_checkbox_value(checkbox);
+      hide_if_done(checkbox.parentElement.parentElement);
+    }
+    function hide_any_that_are_done() {
+      Array.from(document.getElementsByClassName("piece")).forEach(hide_if_done);
+    }
+    function hide_on_changed() {
+      if (document.getElementById("hideondone").checked) {
+        hide_any_that_are_done()
+      }
+    }
+    function start() {
+      restore_checkbox_values();
+      hide_any_that_are_done();
+    }
+    function reset() {
+      (Array.from(document.getElementsByTagName("input"))
+        .filter(e => e.getAttribute("type") == "checkbox")
+        .forEach(function (e) {
+          e.checked = false;
+          save_checkbox_value(e);
+        }));
+      (Array.from(document.getElementsByClassName("piece"))
+        .forEach(e => e.classList.remove("hiding", "hidden")));
+    }
+  </script>
+  <title>{{ set_id }}</title>
+</head>
+
+<body onload='start()'>
+  <div class="topform">
+    <form class="topform" action="/" method="get">
+      <label for="set_id">Set Id:</label>
+      <input type="text" id="set_id" name="set_id" value='{{ set_id }}'>
+      <input type="submit" value="Submit">
+      <input type="checkbox" id="hideondone" onchange="hide_on_changed(this)"><label for="hideondone"> Hide when
+        complete</label><br />
+    </form>
+    <input class="reset" type="reset" onclick="reset()" value="Reset (clear all checkboxes on this page!)"></input>
+    Data provided by the <a href="https://rebrickable.com/api/">Rebrickable API</a>
+  </div>
+  <h1>{{ set_id }} : {{ set_name }}</h1>
+  <div class="pieces clearfix">
+    {% for piece in set_pieces %}
+    <div class="piece">
+      <img src="{{ piece.img }}">
+      <div>{{ piece.color }} {{ piece.num }}</div>
+      {% for boxes in "x"|ljust:piece.qty %}
+      <span class="checkbox"><input type="checkbox" id="{{ piece.num }}"
+          onchange="respond_to_change(this)"></input></span>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</body>
+
+</html>
+{% endblock %}
