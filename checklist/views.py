@@ -13,12 +13,20 @@ class Piece:
         self.img = img
         self.qty = qty
 
-def sort_by_key(list):
+def sort_by_name(list):
     return list["part"]["name"]
 
+def sort_by_color(list):
+    return list["part"]["color"]
+
+def sort_by_id(list):
+    return list["part"]["id"]
+
+
 # Create your views here.
-def index(request, set_id="1682-1"):
+def index(request, set_id="1682-1", sort_algorithm="name"):
     set_id = request.GET.get('set_id','1682-1')
+    sort_algorithm = request.GET.get('sort_algorithm','name')
     fp = requests.get('https://rebrickable.com/api/v3/lego/sets/' + set_id + '?key=' + settings.REBRICKABLE_API_KEY)
     decoded = json.loads(fp.text)
     fp.close()
@@ -29,9 +37,15 @@ def index(request, set_id="1682-1"):
     decoded = json.loads(fp.text)
     fp.close()
     
-    sortedresults = sorted(decoded["results"], key=sort_by_key)
+    match (sort_algorithm):
+        case 'name': 
+            sortedresults = sorted(decoded["results"], key=sort_by_name)
+        case 'color': 
+            sortedresults = sorted(decoded["results"], key=sort_by_color)
+        case 'id': 
+            sortedresults = sorted(decoded["results"], key=sort_by_id)
+    
     set_pieces = []
-
     for part in sortedresults:
         if (part['is_spare'] is not True):
             piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]))
