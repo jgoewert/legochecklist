@@ -121,6 +121,9 @@
     function hide_on_changed() {
       if (document.getElementById("hideondone").checked) {
         hide_any_that_are_done()
+      } else {
+        (Array.from(document.getElementsByClassName("piece"))
+        .forEach(e => e.classList.remove("hiding", "hidden")));
       }
     }
     function sort_on_changed() {
@@ -141,7 +144,7 @@
         .forEach(e => e.classList.remove("hiding", "hidden")));
     }
   </script>
-  <title>{{ set_id }}</title>
+  <title>LEGO Checklist for {{ set_id }} : {{ set_name }}</title>
 </head>
 
 <body onload='start()'>
@@ -149,16 +152,16 @@
     <form class="topform" id="topform" action="/" method="get">
       <label for="set_id">Set Id:</label>
       <input type="text" id="set_id" name="set_id" value='{{ set_id }}'>
-      <input type="submit" value="Submit">
-      <input type="checkbox" id="hideondone" onchange="hide_on_changed(this)"><label for="hideondone"> Hide when
-        complete</label><br />
-        <select name="sorting_algorithm" size="1" onchange="sort_on_changed(this)">
-          <option value="name">Name</option>
-          <option value="color">Color</option>
-          <option value="id">Id</option>
-        </select>
+      <input type="submit" value="Submit"><br/>
+      <label for="sort_algorithm">Sort by:</label>
+      <select name="sort_algorithm" size="1" onchange="sort_on_changed(this)">
+        <option value="name" {% if  selected_sort == "name" %} selected{% endif %}>Name</option>
+        <option value="color" {% if  selected_sort == "color" %} selected{% endif %}>Color</option>
+        <option value="partnum" {% if  selected_sort == "partnum" %} selected{% endif %}>PartNum</option>
+      </select><br/>
+      <input type="checkbox" id="hideondone" onchange="hide_on_changed(this)"><label for="hideondone"> Hide when complete</label><br />
       </form>
-    <input class="reset" type="reset" onclick="reset()" value="Reset (clear all checkboxes on this page!)"></input>
+      <input class="reset" type="reset" onclick="reset()" value="Reset (clear all checkboxes on this page!)"></input>
     Data provided by the <a href="https://rebrickable.com/api/">Rebrickable API</a> - <a href="https://github.com/jgoewert/legochecklist">Source Code at GitHub</a>
   </div>
   <h1>{{ set_id }} : {{ set_name }}</h1>

@@ -17,10 +17,10 @@ def sort_by_name(list):
     return list["part"]["name"]
 
 def sort_by_color(list):
-    return list["part"]["color"]
+    return list["color"]["id"]
 
-def sort_by_id(list):
-    return list["part"]["id"]
+def sort_by_partnum(list):
+    return list["part"]["part_num"]
 
 
 # Create your views here.
@@ -42,8 +42,8 @@ def index(request, set_id="1682-1", sort_algorithm="name"):
             sortedresults = sorted(decoded["results"], key=sort_by_name)
         case 'color': 
             sortedresults = sorted(decoded["results"], key=sort_by_color)
-        case 'id': 
-            sortedresults = sorted(decoded["results"], key=sort_by_id)
+        case 'partnum': 
+            sortedresults = sorted(decoded["results"], key=sort_by_partnum)
     
     set_pieces = []
     for part in sortedresults:
@@ -51,4 +51,4 @@ def index(request, set_id="1682-1", sort_algorithm="name"):
             piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]))
             set_pieces.append(piece)
 
-    return render(request, "index.html", {"set_id": set_id, "set_name": set_name, "set_pieces": set_pieces})
+    return render(request, "index.html", {"set_id": set_id, "set_name": set_name, "set_pieces": set_pieces, "selected_sort": sort_algorithm})
