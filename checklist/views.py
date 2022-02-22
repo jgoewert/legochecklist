@@ -49,7 +49,7 @@ def index(request, set_id="1682-1", sort_algorithm="name"):
     set_pieces = []
     for part in sortedresults:
         if (part['is_spare'] is not True):
-            piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]), part["part"]["part_name"])
+            piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]), part["part"]["name"])
             set_pieces.append(piece)
 
     return render(request, "index.html", {"set_id": set_id, "set_name": set_name, "set_pieces": set_pieces, "selected_sort": sort_algorithm})
