@@ -7,8 +7,9 @@ import requests
 import json
 
 class Piece:
-    def __init__(self, num, color, img, qty):
+    def __init__(self, num, color, img, qty, name):
         self.num = num
+        self.name = name
         self.color = color
         self.img = img
         self.qty = qty
@@ -48,7 +49,7 @@ def index(request, set_id="1682-1", sort_algorithm="name"):
     set_pieces = []
     for part in sortedresults:
         if (part['is_spare'] is not True):
-            piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]))
+            piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]), part["part"]["part_name"])
             set_pieces.append(piece)
 
     return render(request, "index.html", {"set_id": set_id, "set_name": set_name, "set_pieces": set_pieces, "selected_sort": sort_algorithm})
