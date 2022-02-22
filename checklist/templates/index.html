@@ -185,7 +185,7 @@
     {% for piece in set_pieces %}
     <div class="piece">
       <img src="{{ piece.img }}">
-      <div>{{ piece.color }} {{piece.name}} {{ piece.num }}</div>
+      <div>{{ piece.color }} {{ piece.num }} <br/>{{piece.name}} </div>
       <div>{{ piece.qty }}
         {% for boxes in "x"|ljust:piece.qty %}
       <span class="checkbox"><input type="checkbox" id="{{ piece.num }}"
