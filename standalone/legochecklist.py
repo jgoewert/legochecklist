@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, QPushButton, QSizePolicy, QScrollArea, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, QPushButton, QSizePolicy, QScrollArea, QVBoxLayout, QSpinBox
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, QSize
 import requests
@@ -9,6 +9,32 @@ import os, os.path
 #import urllib.request
 
 class Piece:
+    stylesheet = """QSpinBox {
+  border: 1px solid #ABABAB;
+  border-radius: 3px;
+}
+
+QSpinBox::down-button  {
+  subcontrol-origin: margin;
+  subcontrol-position: center left;
+  image: url(:/icons/leftArrow.png);
+  background-color: #ABABAB;
+  left: 1px;
+  height: 24px;
+  width: 24px;
+}
+
+QSpinBox::up-button  {
+  subcontrol-origin: margin;
+  subcontrol-position: center right;
+  image: url(:/icons/rightArrow.png);
+  background-color: #ABABAB;
+  right: 1px;
+  height: 24px;
+  width: 24px;
+}"""
+
+    widget = None
     def __init__(self, num, color, img, qty, name):
         self.num = num
         self.name = name
@@ -43,6 +69,39 @@ class Piece:
         imgicon.setScaledContents(True)
         return imgicon
 
+    def spinboxchanged(self, value_as_int):
+        if value_as_int == self.qty:
+            self.widget.setStyleSheet("background-color: green;")
+        else:
+            self.widget.setStyleSheet("background-color: white;")
+
+    def getWidget(self):
+        block = QGridLayout()
+        block.addWidget(QLabel(self.num + " - " + self.name),0,0,1,2)
+        partImage = self.getPixmap()
+        partImage.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        block.addWidget(partImage,1,0,3,1)
+        quantityLabel = QLabel("Want\n" + str(self.qty))
+        quantityLabel.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        block.addWidget(quantityLabel,1,1)
+        haveLabel = QLabel("Have")
+        haveLabel.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        block.addWidget(haveLabel,2,1)
+        spinbox = QSpinBox()
+        spinbox.setMaximum(self.qty)
+        spinbox.valueChanged.connect(self.spinboxchanged)
+        spinbox.setStyleSheet(self.stylesheet)
+        spinbox.setMaximumWidth(100)
+        spinbox.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        block.addWidget(spinbox,3,1)
+        
+        self.widget = QWidget()
+        self.widget.setStyleSheet("background-color: white;")
+        self.widget.setBaseSize(80,200)
+        self.widget.setMaximumWidth(200)
+        self.widget.setLayout(block)
+        return self.widget
+
 def sort_by_name(list):
     return list["part"]["name"]
 
@@ -58,6 +117,20 @@ def main():
     set_id="1682-1"
     sort_algorithm="name"
     
+
+    app = QApplication([])
+    window = QWidget()
+    window.setWindowTitle("Lego Checklist Generator")
+    window.setGeometry(100,100,1280,980)
+   
+    toplayout = QGridLayout()
+    toplayout.addWidget((QPushButton("Uncomplete")), 0,0)
+    toplayout.addWidget((QPushButton("Complete")), 0,1)
+
+    scrollarea = QScrollArea()
+    scrollwidget = QWidget()
+    scrollvbox = QVBoxLayout()
+
     #set_id = request.GET.get('set_id','1682-1')
     #sort_algorithm = request.GET.get('sort_algorithm','name')
 
@@ -85,31 +158,9 @@ def main():
             piece = Piece(part["part"]["part_num"], part["color"]["name"], part["part"]["part_img_url"], int(part["quantity"]), part["part"]["name"])
             set_pieces.append(piece)
 
-    app = QApplication([])
-    window = QWidget()
-    window.setWindowTitle("Lego Checklist Generator")
-    window.setGeometry(100,100,1280,980)
-   
-    toplayout = QGridLayout()
-    toplayout.addWidget((QPushButton("Uncomplete")), 0,0)
-    toplayout.addWidget((QPushButton("Complete")), 0,1)
-
-    scrollarea = QScrollArea()
-    scrollwidget = QWidget()
-    scrollvbox = QVBoxLayout()
-    
-
-    count = 0
     for part in set_pieces:
-        block = QGridLayout()
-        block.addWidget(part.getPixmap(),0,0)
-        block.addWidget(QLabel(part.name),0,1)
+        scrollvbox.addWidget(part.getWidget())
 
-        blockWidget = QWidget()
-        blockWidget.setStyleSheet("background-color: white;")
-        blockWidget.setBaseSize(68,200)
-        blockWidget.setLayout(block)
-        scrollvbox.addWidget(blockWidget)
     scrollwidget.setLayout(scrollvbox)
 
     scrollarea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
