@@ -2,7 +2,7 @@
 
 A simple, printable checklist for pieces in a LEGO set written in Python/Django
 
-Running at [https://legochecklist.herokuapp.com/](https://legochecklist.onrender.com/)
+Running at https://legochecklist.onrender.com/
 
 Based on the PHP code from chkno.net
 
