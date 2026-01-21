@@ -1,0 +1,29 @@
+[project]
+name = "legochecklist"
+version = "0.1.0"
+description = "A simple, printable checklist for pieces in a LEGO set written in Python/Django"
+authors = [
+    {name = "John Doe", email = "john@example.com"},
+]
+dependencies = [
+    "django",
+    "gunicorn",
+    "django-heroku",
+    "requests",
+    "django-environ",
+]
+requires-python = ">=3.8"
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

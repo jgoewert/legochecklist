@@ -1,5 +1,7 @@
 django
 gunicorn
-django-heroku
+# django-heroku
 requests
 django-environ
+ruff
+black
