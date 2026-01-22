@@ -1,8 +1,28 @@
-venv
-*.pyc
-staticfiles
+# Python
+*.py[cod]
+__pycache__/
+*.so
 .env
+venv/
+.venv/
+env/
+
+# Django
 db.sqlite3
+staticfiles/
+media/
+*.log
+local_settings.py
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
 getting-started/*
-.venv
 */images/*
