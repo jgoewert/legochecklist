@@ -14,6 +14,15 @@ media/
 *.log
 local_settings.py
 
+# Rebrickable data and the catalog built from it
+rebrickable_csv/
+catalog.sqlite3
+catalog.sqlite3.tmp
+
+# Frontend tests
+node_modules/
+tests/frontend/rendered.html
+
 # Editors
 .vscode/
 .idea/

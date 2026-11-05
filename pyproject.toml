@@ -3,20 +3,14 @@ name = "legochecklist"
 version = "0.1.0"
 description = "A simple, printable checklist for pieces in a LEGO set written in Python/Django"
 authors = [
-    {name = "John Doe", email = "john@example.com"},
+    {name = "John Goewert"},
 ]
-dependencies = [
-    "django",
-    "gunicorn",
-    "django-heroku",
-    "requests",
-    "django-environ",
-]
-requires-python = ">=3.8"
+# Dependencies are pinned in requirements.txt and requirements-dev.txt.
+# Django 6.0 needs Python 3.12 or newer. Deployments use .python-version.
+requires-python = ">=3.12"
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
