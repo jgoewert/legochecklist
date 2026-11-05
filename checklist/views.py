@@ -5,16 +5,23 @@ from . import services
 
 # Create your views here.
 def index(request, set_id="1682-1", selected_sort="name"):
-    set_id = request.GET.get('set_id', '1682-1')
+    set_id = request.GET.get('set_id', '1682-1').strip()
     selected_sort = request.GET.get('selected_sort', 'name')
 
-    decoded, set_id = services.fetch_set_data(set_id)
-    if not decoded:
-        return HttpResponse("Set not found.", status=404)
+    try:
+        decoded, set_id = services.fetch_set_data(set_id)
+        if not decoded:
+            return HttpResponse("Set not found.", status=404)
+        decoded_parts = services.fetch_parts_data(set_id)
+    except services.InvalidSetId:
+        return HttpResponse("Invalid set ID.", status=400)
+    except services.RebrickableError:
+        return HttpResponse(
+            "Could not reach Rebrickable. Please try again shortly.", status=502
+        )
 
     set_name = decoded["name"]
 
-    decoded_parts = services.fetch_parts_data(set_id)
     if not decoded_parts:
         return HttpResponse("Set parts not found.", status=404)
 
