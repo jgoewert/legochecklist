@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {% include "_styles.html" %}
+  {% include "_app_head.html" %}
   <title>LEGO Checklist: {% if query %}sets matching “{{ query }}”{% else %}find a set{% endif %}</title>
 </head>
 
@@ -14,7 +15,10 @@
     Data provided by <a href="https://rebrickable.com/downloads/">Rebrickable</a> - <a
       href="https://github.com/jgoewert/legochecklist">Source Code at GitHub</a>
   </div>
-  {% if matches %}
+  {% if error %}
+  <h1>Can't make that checklist</h1>
+  <p class="progress">{{ error }} Separate set numbers with commas, such as 1682, 6080.</p>
+  {% elif matches %}
   <h1>Sets matching “{{ query }}”</h1>
   <p class="progress">
     {% if total > matches|length %}

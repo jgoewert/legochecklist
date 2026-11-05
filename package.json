@@ -2,7 +2,7 @@
   "name": "legochecklist-frontend-tests",
   "private": true,
   "scripts": {
-    "test": "python tests/frontend/render_fixture.py && node --test tests/frontend/checklist.test.js"
+    "test": "python tests/frontend/render_fixture.py && node --test tests/frontend/checklist.test.js tests/frontend/sw.test.js"
   },
   "devDependencies": {
     "jsdom": "24.1.3"

@@ -1,4 +1,5 @@
 import logging
+import re
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
@@ -63,12 +64,17 @@ PARTS_QUERY = """
         colors.name,
         colors.rgb,
         SUM(set_lines.quantity),
-        set_lines.is_spare = 'True'
+        set_lines.is_spare = 'True',
+        part_categories.name
     FROM set_lines
     JOIN parts ON parts.part_num = set_lines.part_num
     JOIN colors ON colors.id = set_lines.color_id
+    LEFT JOIN part_categories ON part_categories.id = parts.part_cat_id
     GROUP BY set_lines.part_num, set_lines.color_id, set_lines.is_spare
 """
+
+# Used for parts whose category is missing from part_categories.
+UNKNOWN_CATEGORY = "Other"
 
 
 @dataclass
@@ -79,6 +85,8 @@ class Piece:
     qty: int
     name: str
     color_rgb: str | None = None
+    category: str = UNKNOWN_CATEGORY
+    spare: bool = False
 
 
 class CatalogUnavailable(Exception):
@@ -98,12 +106,23 @@ def _query(sql, params):
 def fetch_set_data(set_id):
     """
     Looks up a set in the catalog, trying "<set_id>-1" so that "1682" finds "1682-1".
-    Returns a tuple of ({"name": name}, set_id), or (None, None) if not found.
+    Returns a tuple of ({"name", "year", "num_parts", "img_url"}, set_id), or
+    (None, None) if not found.
     """
     for candidate in (set_id, f"{set_id}-1"):
-        rows = _query("SELECT name FROM sets WHERE set_num = ?", (candidate,))
+        rows = _query(
+            "SELECT name, year, num_parts, img_url FROM sets WHERE set_num = ?",
+            (candidate,),
+        )
         if rows:
-            return {"name": rows[0][0]}, candidate
+            name, year, num_parts, img_url = rows[0]
+            data = {
+                "name": name,
+                "year": year,
+                "num_parts": num_parts,
+                "img_url": img_url or None,
+            }
+            return data, candidate
     return None, None
 
 
@@ -115,7 +134,7 @@ def search_sets(query, limit=SEARCH_LIMIT):
     Finds sets whose name contains every word of the query, or whose number starts
     with it. Returns (matches, total), newest first, with at most `limit` matches.
     """
-    words = query.split()
+    words = [word for word in re.split(r"[\s,+]+", query) if word]
     if not words:
         return [], 0
 
@@ -159,8 +178,9 @@ def fetch_parts_data(set_id):
             "color": {"name": color, "rgb": rgb},
             "quantity": quantity,
             "is_spare": bool(is_spare),
+            "category": {"name": category or UNKNOWN_CATEGORY},
         }
-        for num, name, img, color, rgb, quantity, is_spare in _query(
+        for num, name, img, color, rgb, quantity, is_spare, category in _query(
             PARTS_QUERY, (set_id,)
         )
     ]
@@ -177,3 +197,7 @@ def sort_by_color(part_entry):
 
 def sort_by_partnum(part_entry):
     return part_entry["part"]["part_num"]
+
+
+def sort_by_category(part_entry):
+    return part_entry.get("category", {}).get("name", UNKNOWN_CATEGORY)

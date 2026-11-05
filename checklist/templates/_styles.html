@@ -148,11 +148,11 @@
       margin-bottom: 1em;
     }
 
-    .color-group {
+    .piece-group {
       clear: both;
     }
 
-    .color-group h2 {
+    .piece-group h2 {
       margin: 1em 0 .3em 0;
       font-size: 120%;
       color: #AB9DF2;
@@ -162,8 +162,58 @@
       display: none !important;
     }
 
-    /* Drop a colour's heading once all of its cards are hidden or filtered out. */
-    .color-group:not(:has(.piece:not(.hidden):not(.filtered-out))) {
+    .piece.spare {
+      border-style: dashed;
+    }
+
+    .part-num a {
+      color: inherit;
+      text-decoration: underline dotted;
+    }
+
+    /* The set's picture and details, under the title. */
+    .set-details {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1em 2em;
+      margin-bottom: 1em;
+    }
+
+    .set-detail {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+    }
+
+    .set-image {
+      max-height: 12em;
+      max-width: min(20em, 90vw);
+      object-fit: contain;
+      background-color: white;
+      border-radius: 4px;
+      padding: .3em;
+      box-sizing: border-box;
+    }
+
+    .set-details.several .set-image {
+      max-height: 6em;
+      max-width: 9em;
+    }
+
+    .set-detail-info {
+      display: flex;
+      flex-direction: column;
+      gap: .2em;
+    }
+
+    .set-detail-name {
+      font-weight: bold;
+      color: #FFD866;
+    }
+
+    /* Drop a group's heading once all of its cards are hidden or filtered out. */
+    .piece-group:not(:has(.piece:not(.hidden):not(.filtered-out))) {
       display: none;
     }
 
@@ -398,13 +448,26 @@
       }
 
       h1,
-      .color-group h2 {
+      .piece-group h2 {
         color: black;
       }
 
       .progress,
-      .filter {
+      .filter,
+      .set-links {
         display: none;
+      }
+
+      a,
+      .part-num a,
+      .set-detail-name {
+        color: black;
+        text-decoration: none;
+      }
+
+      .set-image {
+        max-height: 8em;
+        border: 1px solid #ccc;
       }
 
       .swatch {
@@ -428,7 +491,7 @@
         -webkit-print-color-adjust: exact;
       }
 
-      .color-group h2 {
+      .piece-group h2 {
         break-after: avoid;
       }
 
