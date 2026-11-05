@@ -8,30 +8,66 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Returns a set's own parts plus the parts of its minifigures, which are inventoried
+# separately under the minifigure's number. A part appearing in both is combined, so
+# each part and colour has one line.
+#
 # Sets can have several inventory versions. The highest is the latest correction,
 # and it agrees with the part counts in sets.csv far more often than the lowest.
-# A few sets have an empty latest version, so only versions with parts are considered.
+# A few have an empty latest version, so only versions with contents are considered.
 PARTS_QUERY = """
-    SELECT
-        parts.part_num,
-        parts.name,
-        inventory_parts.img_url,
-        colors.name,
-        colors.rgb,
-        inventory_parts.quantity,
-        inventory_parts.is_spare = 'True'
-    FROM inventory_parts
-    JOIN parts ON parts.part_num = inventory_parts.part_num
-    JOIN colors ON colors.id = inventory_parts.color_id
-    WHERE inventory_parts.inventory_id = (
+    WITH set_inventory AS (
         SELECT id FROM inventories
-        WHERE set_num = ? AND EXISTS (
-            SELECT 1 FROM inventory_parts
-            WHERE inventory_parts.inventory_id = inventories.id
+        WHERE set_num = ? AND (
+            EXISTS (
+                SELECT 1 FROM inventory_parts
+                WHERE inventory_parts.inventory_id = inventories.id
+            )
+            OR EXISTS (
+                SELECT 1 FROM inventory_minifigs
+                WHERE inventory_minifigs.inventory_id = inventories.id
+            )
         )
         ORDER BY version DESC
         LIMIT 1
+    ),
+    set_lines AS (
+        SELECT part_num, color_id, quantity, is_spare, img_url
+        FROM inventory_parts
+        WHERE inventory_id = (SELECT id FROM set_inventory)
+
+        UNION ALL
+
+        SELECT
+            inventory_parts.part_num,
+            inventory_parts.color_id,
+            inventory_parts.quantity * inventory_minifigs.quantity,
+            inventory_parts.is_spare,
+            inventory_parts.img_url
+        FROM inventory_minifigs
+        JOIN inventory_parts ON inventory_parts.inventory_id = (
+            SELECT id FROM inventories
+            WHERE set_num = inventory_minifigs.fig_num AND EXISTS (
+                SELECT 1 FROM inventory_parts
+                WHERE inventory_parts.inventory_id = inventories.id
+            )
+            ORDER BY version DESC
+            LIMIT 1
+        )
+        WHERE inventory_minifigs.inventory_id = (SELECT id FROM set_inventory)
     )
+    SELECT
+        parts.part_num,
+        parts.name,
+        MAX(set_lines.img_url),
+        colors.name,
+        colors.rgb,
+        SUM(set_lines.quantity),
+        set_lines.is_spare = 'True'
+    FROM set_lines
+    JOIN parts ON parts.part_num = set_lines.part_num
+    JOIN colors ON colors.id = set_lines.color_id
+    GROUP BY set_lines.part_num, set_lines.color_id, set_lines.is_spare
 """
 
 
@@ -73,8 +109,8 @@ def fetch_set_data(set_id):
 
 def fetch_parts_data(set_id):
     """
-    Returns {"results": [...]} with the parts in a set's latest inventory. The list
-    is empty for sets with no parts of their own, such as multipacks.
+    Returns {"results": [...]} with the parts in a set's latest inventory, including
+    its minifigures. The list is empty for sets with neither, such as multipacks.
     Expects the full set ID returned by fetch_set_data.
     """
     results = [

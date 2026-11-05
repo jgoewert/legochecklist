@@ -1,3 +1,4 @@
+import gzip
 import io
 import re
 import tempfile
@@ -19,6 +20,8 @@ CSV_FIXTURES = {
 5678-1,Versioned Set,2000,1,1,http://x
 9000-1,Multipack,2000,1,0,http://x
 7000-1,Empty Latest Version,2000,1,1,http://x
+4000-1,Set With Minifigs,2000,1,1,http://x
+4100-1,Only Minifigs,2000,1,1,http://x
 """,
     "inventories": """id,version,set_num
 1,1,1234-1
@@ -29,6 +32,10 @@ CSV_FIXTURES = {
 6,1,9000-1
 7,1,7000-1
 8,2,7000-1
+20,1,4000-1
+21,1,4100-1
+30,1,fig-1
+31,2,fig-1
 """,
     "inventory_parts": """inventory_id,part_num,color_id,quantity,is_spare,img_url
 1,3001,4,3,False,http://img/3001.jpg
@@ -39,10 +46,21 @@ CSV_FIXTURES = {
 4,3001,4,1,False,http://img/middle.jpg
 5,3002,0,1,False,http://img/new.jpg
 7,3001,4,1,False,http://img/only.jpg
+20,3001,4,1,False,
+20,3002,0,5,False,http://img/set.jpg
+30,3002,0,9,False,http://img/old-fig.jpg
+31,3001,4,2,False,http://img/fig.jpg
+31,3003,0,1,False,http://img/fig.jpg
+31,3003,0,1,True,http://img/fig.jpg
+""",
+    "inventory_minifigs": """inventory_id,fig_num,quantity
+20,fig-1,3
+21,fig-1,1
 """,
     "parts": """part_num,name,part_cat_id,part_material
 3001,"Brick 2 x 4, Plain",11,Plastic
 3002,Brick 2 x 3,11,Plastic
+3003,Brick 2 x 2,11,Plastic
 """,
     "colors": """id,name,rgb,is_trans,num_parts,num_sets,y1,y2
 0,Black,05131D,False,1,1,2000,2000
@@ -150,6 +168,34 @@ class ServicesTestCase(CatalogTestCase):
             ["http://img/only.jpg"],
         )
 
+    def quantities(self, set_id):
+        return {
+            (part["part"]["part_num"], part["is_spare"]): part["quantity"]
+            for part in services.fetch_parts_data(set_id)["results"]
+        }
+
+    def test_minifigure_parts_are_multiplied_and_combined_with_the_set(self):
+        # 3 minifigures from version 2 of fig-1, whose version 1 must be ignored.
+        self.assertEqual(self.quantities("4000-1"), {
+            ("3001", False): 1 + 3 * 2,
+            ("3002", False): 5,
+            ("3003", False): 3,
+            ("3003", True): 3,
+        })
+
+    def test_combined_part_uses_an_available_image(self):
+        results = services.fetch_parts_data("4000-1")["results"]
+        images = {part["part"]["part_num"]: part["part"]["part_img_url"]
+                  for part in results}
+        self.assertEqual(images["3001"], "http://img/fig.jpg")
+
+    def test_set_with_only_minifigures_lists_their_parts(self):
+        self.assertEqual(self.quantities("4100-1"), {
+            ("3001", False): 2,
+            ("3003", False): 1,
+            ("3003", True): 1,
+        })
+
     def test_set_without_parts_has_empty_results(self):
         self.assertEqual(services.fetch_parts_data("9000-1"), {"results": []})
 
@@ -182,6 +228,20 @@ class BuildCatalogTestCase(CatalogTestCase):
 
         data, _ = services.fetch_set_data("1234-1")
         self.assertEqual(data["name"], "Renamed Set")
+
+    def test_compressed_files_are_read(self):
+        csv_dir = self.temp_dir / "compressed"
+        csv_dir.mkdir()
+        for table, content in CSV_FIXTURES.items():
+            content = content.replace("Test Set", "Compressed Set")
+            with gzip.open(csv_dir / f"{table}.csv.gz", "wt", encoding="utf-8") as file:
+                file.write(content)
+        self.addCleanup(self.build, self.csv_dir)
+
+        self.build(csv_dir)
+
+        data, _ = services.fetch_set_data("1234-1")
+        self.assertEqual(data["name"], "Compressed Set")
 
     def test_missing_file_is_an_error_and_keeps_the_catalog(self):
         csv_dir = self.copy_csvs("missing-file")
@@ -336,9 +396,9 @@ class ViewsTestCase(SimpleTestCase):
 )
 class RealCatalogTestCase(SimpleTestCase):
     def test_set_1682_1_part_count(self):
-        """Set 1682-1 has 407 parts, excluding spares and minifigure parts."""
+        """Set 1682-1 has 420 parts, excluding spares and including minifigures."""
         results = services.fetch_parts_data('1682-1')['results']
 
         total_parts = sum(part['quantity'] for part in results if not part['is_spare'])
 
-        self.assertEqual(total_parts, 407)
+        self.assertEqual(total_parts, 420)

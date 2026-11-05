@@ -10,10 +10,7 @@ Licensed under the MIT License
 
 ## Running locally
 
-You need Python 3.12 or newer and the CSV files from
-[Rebrickable's downloads page](https://rebrickable.com/downloads/), extracted into
-`rebrickable_csv/all_downloads/`. Only `sets`, `inventories`, `inventory_parts`,
-`parts` and `colors` are used.
+You need Python 3.12 or newer.
 
 ```sh
 python -m venv .venv
@@ -26,9 +23,14 @@ python manage.py runserver
 
 ## Updating the data
 
-Replace the CSV files and run `python manage.py build_catalog` again. It reads the
-files into `catalog.sqlite3`, which is what the site uses, and swaps the new catalog
-in once it is complete. Neither the CSV files nor the catalog are committed.
+Set and part data comes from [Rebrickable's downloads page](https://rebrickable.com/downloads/),
+stored compressed in `data/`. Only `sets`, `inventories`, `inventory_parts`,
+`inventory_minifigs`, `parts` and `colors` are used.
+
+To update it, replace those `.csv.gz` files, commit them, and run
+`python manage.py build_catalog`. That reads the files into `catalog.sqlite3`, which
+is what the site uses, and swaps the new catalog in once it is complete. The catalog
+itself is not committed.
 
 ## Tests
 
@@ -47,8 +49,8 @@ skips that test if there isn't one.
 
 ## Deploying
 
-Install from `requirements.txt`, run `python manage.py build_catalog`, then run
-`gunicorn legochecklist.wsgi` with `SECRET_KEY` set. The CSV files must be available
-to the build step, and the site returns a 503 until a catalog has been built.
+Use `pip install -r requirements.txt && python manage.py build_catalog` as the build
+step and `gunicorn legochecklist.wsgi` as the start command, with `SECRET_KEY` set for
+both. The site returns a 503 until a catalog has been built.
 `DEBUG` is off by default. Set `ALLOWED_HOSTS` to your hostnames; Render's own
 hostname is added automatically. See `.env.example` for details.

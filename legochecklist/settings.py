@@ -31,9 +31,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 # Where the build_catalog command reads the Rebrickable CSV files from, and the
 # database it builds from them for the site to read.
-CATALOG_CSV_DIR = Path(
-    env("CATALOG_CSV_DIR", default=BASE_DIR / "rebrickable_csv" / "all_downloads")
-)
+CATALOG_CSV_DIR = Path(env("CATALOG_CSV_DIR", default=BASE_DIR / "data"))
 CATALOG_DB = Path(env("CATALOG_DB", default=BASE_DIR / "catalog.sqlite3"))
 
 # Application definition
