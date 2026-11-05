@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% include "_styles.html" %}
+  <title>LEGO Checklist: {% if query %}sets matching “{{ query }}”{% else %}find a set{% endif %}</title>
+</head>
+
+<body>
+  <div class="topform">
+    {% include "_set_form.html" %}
+    Data provided by <a href="https://rebrickable.com/downloads/">Rebrickable</a> - <a
+      href="https://github.com/jgoewert/legochecklist">Source Code at GitHub</a>
+  </div>
+  {% if matches %}
+  <h1>Sets matching “{{ query }}”</h1>
+  <p class="progress">
+    {% if total > matches|length %}
+    Showing the newest {{ matches|length }} of {{ total }} sets. Add more words to narrow the search.
+    {% else %}
+    {{ total }} set{{ total|pluralize }} found.
+    {% endif %}
+  </p>
+  <ul class="set-results">
+    {% for match in matches %}
+    <li>
+      <a href="/?set_id={{ match.set_num|urlencode }}&amp;selected_sort={{ set_sort|urlencode }}">
+        {% if match.img_url %}
+        <img src="{{ match.img_url }}" alt="" loading="lazy" decoding="async">
+        {% else %}
+        <span class="no-image">No image</span>
+        {% endif %}
+        <span class="set-result-info">
+          <span class="set-result-name">{{ match.name }}</span>
+          <span>{{ match.set_num }} · {{ match.year }} · {{ match.num_parts }} part{{ match.num_parts|pluralize }}</span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif query %}
+  <h1>No sets found</h1>
+  <p class="progress">Nothing matches “{{ query }}”. Try a set number, such as 1682, or words from its name.</p>
+  {% else %}
+  <h1>Find a set</h1>
+  <p class="progress">Enter a set number, such as 1682, or words from its name.</p>
+  {% endif %}
+</body>
+
+</html>

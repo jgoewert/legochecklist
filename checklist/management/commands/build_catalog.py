@@ -31,7 +31,10 @@ DOWNLOAD_ERRORS = (
 # Each table is loaded from the CSV of the same name, either compressed (.csv.gz)
 # or not (.csv). Columns are matched by name, so any others in the files are ignored.
 TABLES = {
-    "sets": "set_num TEXT PRIMARY KEY, name TEXT",
+    "sets": (
+        "set_num TEXT PRIMARY KEY, name TEXT, year INTEGER, num_parts INTEGER, "
+        "img_url TEXT"
+    ),
     "inventories": "id INTEGER PRIMARY KEY, version INTEGER, set_num TEXT",
     "inventory_parts": (
         "inventory_id INTEGER, part_num TEXT, color_id INTEGER, "

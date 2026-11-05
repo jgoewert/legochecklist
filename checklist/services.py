@@ -107,6 +107,46 @@ def fetch_set_data(set_id):
     return None, None
 
 
+SEARCH_LIMIT = 50
+
+
+def search_sets(query, limit=SEARCH_LIMIT):
+    """
+    Finds sets whose name contains every word of the query, or whose number starts
+    with it. Returns (matches, total), newest first, with at most `limit` matches.
+    """
+    words = query.split()
+    if not words:
+        return [], 0
+
+    conditions, params = [], []
+    for word in words:
+        escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        conditions.append(
+            "(name LIKE ? ESCAPE '\\' OR set_num LIKE ? ESCAPE '\\')"
+        )
+        params += [f"%{escaped}%", f"{escaped}%"]
+    where = " AND ".join(conditions)
+
+    total = _query(f"SELECT COUNT(*) FROM sets WHERE {where}", params)[0][0]
+    rows = _query(
+        f"SELECT set_num, name, year, num_parts, img_url FROM sets WHERE {where} "
+        "ORDER BY year DESC, set_num LIMIT ?",
+        [*params, limit],
+    )
+    matches = [
+        {
+            "set_num": set_num,
+            "name": name,
+            "year": year,
+            "num_parts": num_parts,
+            "img_url": img_url or None,
+        }
+        for set_num, name, year, num_parts, img_url in rows
+    ]
+    return matches, total
+
+
 def fetch_parts_data(set_id):
     """
     Returns {"results": [...]} with the parts in a set's latest inventory, including
