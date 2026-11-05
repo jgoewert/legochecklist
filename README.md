@@ -8,6 +8,8 @@ Based on the PHP code from chkno.net
 
 Licensed under the MIT License
 
+Set and part data is sourced from [Rebrickable](https://rebrickable.com/).
+
 ## Running locally
 
 You need Python 3.12 or newer.

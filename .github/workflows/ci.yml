@@ -22,6 +22,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
       - run: python manage.py check
+      - run: python manage.py build_catalog
       - run: python manage.py test
       - uses: actions/setup-node@v4
         with:
