@@ -1,6 +1,8 @@
+from django.http import HttpResponse
 from django.shortcuts import render
-from django.http import HttpResponse    
+
 from . import services
+
 
 # Create your views here.
 def index(request, set_id="1682-1", selected_sort="name"):
@@ -12,17 +14,10 @@ def index(request, set_id="1682-1", selected_sort="name"):
         if not decoded:
             return HttpResponse("Set not found.", status=404)
         decoded_parts = services.fetch_parts_data(set_id)
-    except services.InvalidSetId:
-        return HttpResponse("Invalid set ID.", status=400)
-    except services.RebrickableError:
-        return HttpResponse(
-            "Could not reach Rebrickable. Please try again shortly.", status=502
-        )
+    except services.CatalogUnavailable:
+        return HttpResponse("The parts catalog is not available.", status=503)
 
     set_name = decoded["name"]
-
-    if not decoded_parts:
-        return HttpResponse("Set parts not found.", status=404)
 
     sort_key = services.sort_by_name
     match (selected_sort):
@@ -33,7 +28,9 @@ def index(request, set_id="1682-1", selected_sort="name"):
         case 'partnum':
             sort_key = services.sort_by_partnum
     
-    sortedresults = sorted(decoded_parts["results"], key=sort_key)
+    # Sorting is stable, so parts that tie on the chosen key stay in name order.
+    by_name = sorted(decoded_parts["results"], key=services.sort_by_name)
+    sortedresults = sorted(by_name, key=sort_key)
 
     set_pieces = []
     for part in sortedresults:
@@ -43,8 +40,14 @@ def index(request, set_id="1682-1", selected_sort="name"):
                 color=part["color"]["name"], 
                 img=part["part"]["part_img_url"], 
                 qty=int(part["quantity"]), 
-                name=part["part"]["name"]
+                name=part["part"]["name"],
+                color_rgb=part["color"].get("rgb"),
             )
             set_pieces.append(piece)
 
-    return render(request, "index.html", {"set_id": set_id, "set_name": set_name, "set_pieces": set_pieces, "set_sort": selected_sort})
+    return render(request, "index.html", {
+        "set_id": set_id,
+        "set_name": set_name,
+        "set_pieces": set_pieces,
+        "set_sort": selected_sort,
+    })

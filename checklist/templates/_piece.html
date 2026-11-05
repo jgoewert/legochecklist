@@ -1,0 +1,22 @@
+<div class="piece">
+  {% if piece.img %}
+  <img src="{{ piece.img }}" alt="{{ piece.name }}">
+  {% else %}
+  <div class="no-image">No image</div>
+  {% endif %}
+  <div class="piece-info">
+    <div>
+      <div>{{ piece.num }}</div>
+      <div>{{ piece.name }}</div>
+      <div>{% if piece.color_rgb %}<span class="swatch" style="background-color: #{{ piece.color_rgb }}"></span>{% endif %}{{ piece.color }}</div>
+    </div>
+    <div>{{ piece.qty }}
+      {% for boxes in "x"|ljust:piece.qty %}
+      <span class="checkbox"><input type="checkbox"
+          aria-label="{{ piece.name }}, {{ piece.color }}, {{ forloop.counter }} of {{ piece.qty }}"
+          data-key="{{ set_id }}:{{ piece.num }}:{{ piece.color }}:{{ forloop.counter }}"
+          onchange="respond_to_change(this)"></span>
+      {% endfor %}
+    </div>
+  </div>
+</div>

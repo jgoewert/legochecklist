@@ -1,8 +1,9 @@
-{% block content %}
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-size: 100%;
@@ -121,10 +122,80 @@
       text-align: center;
     }
 
+    .piece {
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+
+    .no-image {
+      width: 5em;
+      height: 5em;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 80%;
+      border: 1px dashed #78DCE8;
+      box-sizing: border-box;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: .8em;
+      height: .8em;
+      margin-right: .35em;
+      border: 1px solid #FCFCFA;
+      border-radius: 2px;
+    }
+
+    .progress {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+
+    .color-group {
+      clear: both;
+    }
+
+    .color-group h2 {
+      margin: 1em 0 .3em 0;
+      font-size: 120%;
+      color: #AB9DF2;
+    }
+
+    /* Drop a colour's heading once all of its cards are hidden. */
+    .color-group:not(:has(.piece:not(.hidden))) {
+      display: none;
+    }
+
     @media print {
       body {
         background-color: white;
         color: black;
+      }
+
+      h1,
+      .color-group h2 {
+        color: black;
+      }
+
+      .progress {
+        display: none;
+      }
+
+      .swatch {
+        border-color: #000;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .no-image {
+        border-color: #000;
+      }
+
+      .color-group h2 {
+        break-after: avoid;
       }
 
       .topform {
@@ -139,28 +210,9 @@
         align-items: center;
       }
 
-      .checkbox {
-        width: 20px;
-        height: 20px;
-        border: 1px solid #000;
-        display: inline-block;
-      }
-
-      /* This is what simulates a checkmark icon */
-      .checkbox.checked:after {
-        content: '';
-        display: block;
-        width: 4px;
-        height: 7px;
-
-        /* "Center" the checkmark */
-        position: relative;
-        top: 4px;
-        left: 7px;
-
-        border: solid #000;
-        border-width: 0 2px 2px 0;
-        transform: rotate(45deg);
+      .checkbox input {
+        width: 16px;
+        height: 16px;
       }
 
       .reset {
@@ -189,6 +241,11 @@
         localStorage.removeItem(storage_key(checkbox));
       }
     }
+    function update_progress() {
+      const boxes = piece_checkboxes(document);
+      const found = boxes.filter(e => e.checked).length;
+      document.getElementById("progress").textContent = found + ' / ' + boxes.length + ' found';
+    }
     function is_done(piece) {
       return piece_checkboxes(piece).every(e => e.checked);
     }
@@ -211,6 +268,7 @@
     }
     function respond_to_change(checkbox) {
       save_checkbox_value(checkbox);
+      update_progress();
       hide_if_done(checkbox.closest('.piece'));
     }
     function hide_any_that_are_done() {
@@ -232,6 +290,7 @@
     function start() {
       document.getElementById("hideondone").checked = localStorage.getItem(HIDE_SETTING_KEY) === 'true';
       restore_checkbox_values();
+      update_progress();
       hide_any_that_are_done();
     }
     function reset() {
@@ -239,6 +298,7 @@
         e.checked = false;
         save_checkbox_value(e);
       });
+      update_progress();
       (Array.from(document.getElementsByClassName("piece"))
         .forEach(e => e.classList.remove("hiding", "hidden")));
     }
@@ -254,40 +314,38 @@
       <input type="submit" value="Submit"><br />
       <input type="checkbox" id="hideondone" onchange="hide_on_changed(this)"><label for="hideondone"> Hide when
         complete</label><br />
-      <label for="selected_sort">Sort by: {{selected_sort}}</label>
-      <select name="selected_sort" size="1" onchange="sort_on_changed(this)">
+      <label for="selected_sort">Sort by:</label>
+      <select id="selected_sort" name="selected_sort" size="1" onchange="sort_on_changed(this)">
         <option value="name" {% if set_sort == 'name' %} selected{% endif %}>Name</option>
         <option value="color" {% if set_sort == 'color' %} selected{% endif %}>Color</option>
         <option value="partnum" {% if set_sort == 'partnum' %} selected{% endif %}>PartNum</option>
       </select><br />
     </form>
     <input class="reset" type="reset" onclick="reset()" value="Reset (clear all checkboxes on this page!)"></input>
-    Data provided by the <a href="https://rebrickable.com/api/">Rebrickable API</a> - <a
+    Data provided by <a href="https://rebrickable.com/downloads/">Rebrickable</a> - <a
       href="https://github.com/jgoewert/legochecklist">Source Code at GitHub</a>
   </div>
   <h1>{{ set_id }} : {{ set_name }}</h1>
+  <div class="progress" id="progress" aria-live="polite"></div>
+  {% if set_sort == 'color' %}
+  {% regroup set_pieces by color as color_groups %}
+  {% for group in color_groups %}
+  <section class="color-group">
+    <h2>{{ group.grouper }}</h2>
+    <div class="pieces clearfix">
+      {% for piece in group.list %}
+      {% include "_piece.html" %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+  {% else %}
   <div class="pieces clearfix">
     {% for piece in set_pieces %}
-    <div class="piece">
-      <img src="{{ piece.img }}">
-      <div class="piece-info">
-        <div>
-          <div>{{ piece.num }}</div>
-          <div>{{ piece.name }}</div>
-          <div>{{ piece.color }}</div>
-        </div>
-        <div>{{ piece.qty }}
-          {% for boxes in "x"|ljust:piece.qty %}
-          <span class="checkbox"><input type="checkbox"
-              data-key="{{ set_id }}:{{ piece.num }}:{{ piece.color }}:{{ forloop.counter }}"
-              onchange="respond_to_change(this)"></input></span>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
+    {% include "_piece.html" %}
     {% endfor %}
   </div>
+  {% endif %}
 </body>
 
 </html>
-{% endblock %}
