@@ -13,10 +13,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.urls import path
+from django.urls import path, re_path
 
 import checklist.views
 
 urlpatterns = [
     path("", checklist.views.index, name="index"),
+    path("sw.js", checklist.views.service_worker, name="service-worker"),
+    path("manifest.webmanifest", checklist.views.manifest, name="manifest"),
+    re_path(r"^icon-(?P<size>192|512)\.png$", checklist.views.icon, name="icon"),
 ]

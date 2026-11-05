@@ -225,6 +225,7 @@
         .forEach(e => e.classList.remove("hiding", "hidden")));
     }
   </script>
+  {% include "_app_head.html" %}
   <title>LEGO Checklist for {{ set_id }} : {{ set_name }}</title>
 </head>
 
@@ -232,14 +233,18 @@
   <div class="topform">
     <form class="topform" id="topform" action="/" method="get">
       <label for="set_id">Set number or name:</label>
-      <input type="text" id="set_id" name="set_id" value='{{ set_id }}' placeholder="1682 or space shuttle">
+      <input type="text" id="set_id" name="set_id" value='{{ set_id }}' placeholder="1682 or space shuttle"
+        title="Separate set numbers with commas to combine them, such as 1682, 6080">
       <input type="submit" value="Find"><br />
       <input type="checkbox" id="hideondone" onchange="hide_on_changed(this)"><label for="hideondone"> Hide when
         complete</label><br />
+      <input type="checkbox" id="spares" name="spares" value="1" {% if show_spares %}checked{% endif %}
+        onchange="sort_on_changed(this)"><label for="spares"> Show spare parts{% if spare_count %} ({{ spare_count }}){% endif %}</label><br />
       <label for="selected_sort">Sort by:</label>
       <select id="selected_sort" name="selected_sort" size="1" onchange="sort_on_changed(this)">
         <option value="name" {% if set_sort == 'name' %} selected{% endif %}>Name</option>
         <option value="color" {% if set_sort == 'color' %} selected{% endif %}>Color</option>
+        <option value="category" {% if set_sort == 'category' %} selected{% endif %}>Category</option>
         <option value="partnum" {% if set_sort == 'partnum' %} selected{% endif %}>PartNum</option>
       </select>
       <button type="button" class="view-toggle" id="viewtoggle" aria-pressed="false"
@@ -263,34 +268,45 @@
     // Applied before the pieces render, so the saved view shows without a flash.
     apply_view(saved_view());
   </script>
+  {% if sets|length > 1 %}
+  <h1>Combined checklist: {{ sets|length }} sets</h1>
+  {% else %}
   <h1>{{ set_id }} : {{ set_name }}</h1>
+  {% endif %}
+  <div class="set-details{% if sets|length > 1 %} several{% endif %}">
+    {% for set in sets %}
+    <div class="set-detail">
+      {% if set.img_url %}
+      <img class="set-image" src="{{ set.img_url }}" alt="Set {{ set.set_num }}: {{ set.name }}">
+      {% endif %}
+      <div class="set-detail-info">
+        {% if sets|length > 1 %}<div class="set-detail-name">{{ set.set_num }} : {{ set.name }}</div>{% endif %}
+        <div>{{ set.year }} · {{ set.num_parts }} part{{ set.num_parts|pluralize }}</div>
+        <div class="set-links">
+          <a href="{{ set.rebrickable_url }}" target="_blank" rel="noopener">Rebrickable page</a> ·
+          <a href="{{ set.instructions_url }}" target="_blank" rel="noopener">Building instructions</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   <div class="progress" id="progress" aria-live="polite"></div>
   <div class="filter">
     <label for="filter">Find a part:</label>
     <input type="search" id="filter" placeholder="name, number or colour" oninput="filter_pieces(this.value)">
     <span id="filter-status" aria-live="polite"></span>
   </div>
-  {% if set_sort == 'color' %}
-  {% regroup set_pieces by color as color_groups %}
-  {% for group in color_groups %}
-  <section class="color-group">
-    <h2>{{ group.grouper }}</h2>
+  {% for heading, pieces in groups %}
+  <section class="piece-group">
+    {% if heading %}<h2>{{ heading }}</h2>{% endif %}
     <div class="pieces clearfix">
       {% include "_list_header.html" %}
-      {% for piece in group.list %}
+      {% for piece in pieces %}
       {% include "_piece.html" %}
       {% endfor %}
     </div>
   </section>
   {% endfor %}
-  {% else %}
-  <div class="pieces clearfix">
-    {% include "_list_header.html" %}
-    {% for piece in set_pieces %}
-    {% include "_piece.html" %}
-    {% endfor %}
-  </div>
-  {% endif %}
 </body>
 
 </html>

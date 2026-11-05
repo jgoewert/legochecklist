@@ -41,7 +41,8 @@ TABLES = {
         "quantity INTEGER, is_spare TEXT, img_url TEXT"
     ),
     "inventory_minifigs": "inventory_id INTEGER, fig_num TEXT, quantity INTEGER",
-    "parts": "part_num TEXT PRIMARY KEY, name TEXT",
+    "parts": "part_num TEXT PRIMARY KEY, name TEXT, part_cat_id INTEGER",
+    "part_categories": "id INTEGER PRIMARY KEY, name TEXT",
     "colors": "id INTEGER PRIMARY KEY, name TEXT, rgb TEXT",
 }
 INDEXES = (

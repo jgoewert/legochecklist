@@ -1,6 +1,8 @@
 import gzip
 import io
+import json
 import re
+import struct
 import tempfile
 import unittest
 from pathlib import Path
@@ -61,7 +63,11 @@ CSV_FIXTURES = {
     "parts": """part_num,name,part_cat_id,part_material
 3001,"Brick 2 x 4, Plain",11,Plastic
 3002,Brick 2 x 3,11,Plastic
-3003,Brick 2 x 2,11,Plastic
+3003,Brick 2 x 2,99,Plastic
+""",
+    "part_categories": """id,name
+11,Bricks
+14,Plates
 """,
     "colors": """id,name,rgb,is_trans,num_parts,num_sets,y1,y2
 0,Black,05131D,False,1,1,2000,2000
@@ -139,10 +145,26 @@ class ServicesTestCase(CatalogTestCase):
                 "color": {"name": "Red", "rgb": "C91A09"},
                 "quantity": 3,
                 "is_spare": False,
+                "category": {"name": "Bricks"},
             },
             results,
         )
         self.assertEqual(len(results), 3)
+
+    def test_part_without_a_known_category_is_other(self):
+        results = services.fetch_parts_data("4000-1")["results"]
+        categories = {
+            part["part"]["part_num"]: part["category"]["name"] for part in results
+        }
+        self.assertEqual(categories["3003"], "Other")
+        self.assertEqual(categories["3001"], "Bricks")
+
+    def test_set_details_include_year_parts_and_image(self):
+        data, _ = services.fetch_set_data("1234")
+        self.assertEqual(
+            data,
+            {"name": "Test Set", "year": 2000, "num_parts": 5, "img_url": "http://x"},
+        )
 
     def test_spare_flag_is_a_real_boolean(self):
         results = services.fetch_parts_data("1234-1")["results"]
@@ -450,6 +472,123 @@ class CatalogViewsTestCase(CatalogTestCase):
     def test_part_images_load_lazily(self):
         response = self.client.get('/?set_id=1234-1')
         self.assertContains(response, 'loading="lazy"')
+
+    def test_header_shows_the_set_picture_details_and_links(self):
+        response = self.client.get('/?set_id=1234')
+
+        self.assertContains(response, '<img class="set-image" src="http://x"')
+        self.assertContains(response, "2000 · 5 parts")
+        self.assertContains(response, 'href="https://rebrickable.com/sets/1234-1/"')
+        self.assertContains(
+            response, 'href="https://www.lego.com/service/buildinginstructions/1234"'
+        )
+
+    def test_parts_link_to_rebrickable(self):
+        response = self.client.get('/?set_id=1234-1')
+        self.assertContains(response, 'href="https://rebrickable.com/parts/3001/"')
+
+    def test_category_sort_groups_parts_under_category_headings(self):
+        response = self.client.get('/?set_id=4000-1&selected_sort=category')
+        html = response.content.decode()
+
+        self.assertEqual(re.findall(r"<h2>(.+?)</h2>", html), ["Bricks", "Other"])
+        self.assertContains(response, '<option value="category"  selected>')
+
+    def test_spares_are_hidden_unless_asked_for(self):
+        response = self.client.get('/?set_id=1234-1')
+        self.assertNotContains(response, ":spare:")
+        self.assertContains(response, "Show spare parts (1)")
+
+        response = self.client.get('/?set_id=1234-1&spares=1')
+        keys = re.findall(r'data-key="([^"]+)"', response.content.decode())
+        self.assertEqual(keys[-1], "1234-1:spare:3001:Red:1")
+        self.assertEqual(len(keys), 6)
+        self.assertEqual(
+            re.findall(r"<h2>(.+?)</h2>", response.content.decode()), ["Spare parts"]
+        )
+        self.assertContains(response, 'id="spares" name="spares" value="1" checked')
+
+    def test_spares_follow_colour_groups(self):
+        response = self.client.get('/?set_id=1234-1&spares=1&selected_sort=color')
+        self.assertEqual(
+            re.findall(r"<h2>(.+?)</h2>", response.content.decode()),
+            ["Black", "Red", "Spare parts"],
+        )
+
+    def test_several_sets_combine_into_one_checklist(self):
+        response = self.client.get('/', {"set_id": "1234, 1224.1-1"})
+
+        self.assertContains(response, "Combined checklist: 2 sets")
+        self.assertContains(response, "1224.1-1 : Dotted Set")
+        self.assertContains(response, "1234-1 : Test Set")
+        keys = re.findall(r'data-key="([^"]+)"', response.content.decode())
+        # 3001 Red: 3 from Test Set and 1 from Dotted Set. 3002 Black: 2.
+        self.assertEqual(
+            sorted(keys),
+            sorted(
+                [f"1224.1-1+1234-1:3001:Red:{n}" for n in range(1, 5)]
+                + [f"1224.1-1+1234-1:3002:Black:{n}" for n in range(1, 3)]
+            ),
+        )
+
+    def test_combined_sets_share_a_checklist_whatever_the_order(self):
+        first = self.client.get('/', {"set_id": "1234-1+1224.1-1"})
+        second = self.client.get('/', {"set_id": "1224.1, 1234 , 1234-1"})
+        self.assertContains(first, "value='1224.1-1+1234-1'")
+        self.assertContains(second, "value='1224.1-1+1234-1'")
+
+    def test_combining_with_an_unknown_set_says_which(self):
+        response = self.client.get('/', {"set_id": "1234, 8888, 7777"})
+        self.assertContains(
+            response, "Couldn&#x27;t find set 8888, 7777.", status_code=404
+        )
+
+    def test_combining_too_many_sets_is_refused(self):
+        query = ", ".join(["1234"] * 11)
+        response = self.client.get('/', {"set_id": query})
+        self.assertContains(response, "up to 10 sets", status_code=400)
+
+    def test_comma_separated_words_still_search(self):
+        response = self.client.get('/', {"set_id": "only, minifigs"})
+        self.assertContains(response, "Only Minifigs")
+
+
+class AppFilesTestCase(SimpleTestCase):
+    def test_service_worker_is_served_without_caching(self):
+        response = self.client.get('/sw.js')
+        self.assertEqual(response["Content-Type"], "text/javascript")
+        self.assertEqual(response["Cache-Control"], "no-cache")
+        self.assertIn(b"addEventListener('fetch'", response.content)
+
+    def test_manifest_describes_an_installable_app(self):
+        response = self.client.get('/manifest.webmanifest')
+        self.assertEqual(response["Content-Type"], "application/manifest+json")
+        data = json.loads(response.content)
+        self.assertEqual(data["start_url"], "/")
+        self.assertEqual(data["display"], "standalone")
+        self.assertEqual(
+            [icon["sizes"] for icon in data["icons"]], ["192x192", "512x512"]
+        )
+
+    def test_icons_are_pngs_of_the_right_size(self):
+        for size in (192, 512):
+            with self.subTest(size=size):
+                response = self.client.get(f'/icon-{size}.png')
+                self.assertEqual(response["Content-Type"], "image/png")
+                width, height = struct.unpack(">II", response.content[16:24])
+                self.assertEqual((width, height), (size, size))
+        self.assertEqual(self.client.get('/icon-64.png').status_code, 404)
+
+    def test_pages_link_the_manifest_and_register_the_worker(self):
+        with patch(
+            'checklist.services.search_sets', return_value=([], 0)
+        ), patch('checklist.services.fetch_set_data', return_value=(None, None)):
+            response = self.client.get('/', {"set_id": "anything"})
+        self.assertContains(
+            response, '<link rel="manifest" href="/manifest.webmanifest">',
+            status_code=404,
+        )
+        self.assertContains(response, "register('/sw.js')", status_code=404)
 
 
 class SearchSetsTestCase(CatalogTestCase):
