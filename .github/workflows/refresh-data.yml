@@ -1,0 +1,35 @@
+name: Refresh data
+
+# Rebrickable updates its downloads daily, at about 07:15 UTC. This checks the new
+# files, then redeploys the site so that its build downloads them.
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SECRET_KEY: ci-only-not-a-secret
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py build_catalog --download --strict
+      - run: python manage.py test
+      - name: Deploy to Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set, so the site was not redeployed."
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null

@@ -34,6 +34,12 @@ if RENDER_EXTERNAL_HOSTNAME:
 CATALOG_CSV_DIR = Path(env("CATALOG_CSV_DIR", default=BASE_DIR / "data"))
 CATALOG_DB = Path(env("CATALOG_DB", default=BASE_DIR / "catalog.sqlite3"))
 
+# Where build_catalog --download fetches the latest files, which Rebrickable updates
+# daily.
+CATALOG_DOWNLOAD_URL = env(
+    "CATALOG_DOWNLOAD_URL", default="https://cdn.rebrickable.com/media/downloads/"
+)
+
 # Application definition
 
 INSTALLED_APPS = [

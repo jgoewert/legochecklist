@@ -96,6 +96,36 @@ test('reset clears saved boxes, shows cards and keeps the hide option', async ()
   );
 });
 
+const viewButton = () => document.getElementById('viewtoggle');
+const inListView = () => document.body.classList.contains('list-view');
+
+test('the page starts in tile view', () => {
+  assert.equal(inListView(), false);
+  assert.equal(viewButton().textContent, 'List view');
+  assert.equal(viewButton().getAttribute('aria-pressed'), 'false');
+});
+
+test('the view button switches between list and tile views', () => {
+  viewButton().click();
+  assert.equal(inListView(), true);
+  assert.equal(viewButton().textContent, 'Tile view');
+  assert.equal(viewButton().getAttribute('aria-pressed'), 'true');
+  viewButton().click();
+  assert.equal(inListView(), false);
+  assert.equal(viewButton().textContent, 'List view');
+  assert.deepEqual(errors, []);
+});
+
+test('the chosen view survives a reload and does not touch ticks', () => {
+  setChecked(boxes()[0], true);
+  viewButton().click();
+  document.body.classList.remove('list-view');
+  reloadSavedState();
+  assert.equal(inListView(), true);
+  assert.equal(viewButton().textContent, 'Tile view');
+  assert.deepEqual(boxes().map(box => box.checked), [true, false, false, false, false]);
+});
+
 test('progress follows ticks, reloads and reset', () => {
   assert.equal(progress(), '0 / 5 found');
   setChecked(boxes()[0], true);
