@@ -1,0 +1,6 @@
+<form class="set-form" action="/" method="get" role="search">
+  <label for="set_id">Set number or name:</label>
+  <input type="text" id="set_id" name="set_id" value="{{ set_id|default:query }}" placeholder="1682 or space shuttle">
+  <input type="hidden" name="selected_sort" value="{{ set_sort }}">
+  <input type="submit" value="Find">
+</form>

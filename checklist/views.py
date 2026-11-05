@@ -3,16 +3,17 @@ from django.shortcuts import render
 
 from . import services
 
+DEFAULT_SET = "1682-1"
 
-# Create your views here.
-def index(request, set_id="1682-1", selected_sort="name"):
-    set_id = request.GET.get('set_id', '1682-1').strip()
-    selected_sort = request.GET.get('selected_sort', 'name')
+
+def index(request):
+    query = request.GET.get("set_id", DEFAULT_SET).strip()
+    selected_sort = request.GET.get("selected_sort", "name")
 
     try:
-        decoded, set_id = services.fetch_set_data(set_id)
+        decoded, set_id = services.fetch_set_data(query) if query else (None, None)
         if not decoded:
-            return HttpResponse("Set not found.", status=404)
+            return search(request, query, selected_sort)
         decoded_parts = services.fetch_parts_data(set_id)
     except services.CatalogUnavailable:
         return HttpResponse("The parts catalog is not available.", status=503)
@@ -20,26 +21,26 @@ def index(request, set_id="1682-1", selected_sort="name"):
     set_name = decoded["name"]
 
     sort_key = services.sort_by_name
-    match (selected_sort):
-        case 'name':
+    match selected_sort:
+        case "name":
             sort_key = services.sort_by_name
-        case 'color':
+        case "color":
             sort_key = services.sort_by_color
-        case 'partnum':
+        case "partnum":
             sort_key = services.sort_by_partnum
-    
+
     # Sorting is stable, so parts that tie on the chosen key stay in name order.
     by_name = sorted(decoded_parts["results"], key=services.sort_by_name)
     sortedresults = sorted(by_name, key=sort_key)
 
     set_pieces = []
     for part in sortedresults:
-        if (part['is_spare'] is not True):
+        if part["is_spare"] is not True:
             piece = services.Piece(
-                num=part["part"]["part_num"], 
-                color=part["color"]["name"], 
-                img=part["part"]["part_img_url"], 
-                qty=int(part["quantity"]), 
+                num=part["part"]["part_num"],
+                color=part["color"]["name"],
+                img=part["part"]["part_img_url"],
+                qty=int(part["quantity"]),
                 name=part["part"]["name"],
                 color_rgb=part["color"].get("rgb"),
             )
@@ -51,3 +52,19 @@ def index(request, set_id="1682-1", selected_sort="name"):
         "set_pieces": set_pieces,
         "set_sort": selected_sort,
     })
+
+
+def search(request, query, selected_sort):
+    """Lists sets matching a query that isn't a set number. 404 if none match."""
+    matches, total = services.search_sets(query)
+    return render(
+        request,
+        "search.html",
+        {
+            "query": query,
+            "matches": matches,
+            "total": total,
+            "set_sort": selected_sort,
+        },
+        status=200 if matches else 404,
+    )

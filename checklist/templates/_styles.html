@@ -1,0 +1,456 @@
+  <style>
+    body {
+      font-size: 100%;
+      padding-top: 1em;
+      margin-top: 0em;
+      background-color: #2D2A2E;
+      color: #FCFCFA;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    a {
+      color: #78DCE8;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .checkbox {
+      font-size: 120%;
+    }
+
+    .piece {
+      float: left;
+      font-size: 80%;
+      border: solid 1px #78DCE8;
+      background-color: #403E41;
+      padding: .3em;
+      margin: .1em;
+      page-break-inside: avoid;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: .6em;
+    }
+
+    .piece-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Fades out before the script removes the card at 350ms. */
+    .hiding {
+      opacity: 0;
+      transition: opacity .3s ease-out;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .reset {
+      clear: left;
+      margin-top: 2em;
+      background-color: #FF6188;
+      color: #FCFCFA;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .reset:hover {
+      background-color: #ff406f;
+    }
+
+    .clearfix {
+      content: "";
+      clear: both;
+      display: table;
+    }
+
+    img {
+      max-height: 5em;
+    }
+
+    .topform {
+      width: 100%;
+      background-color: #403E41;
+      color: #FCFCFA;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      border-bottom: 3px solid #AB9DF2;
+    }
+
+    input[type="text"],
+    select {
+      background-color: #2D2A2E;
+      color: #FCFCFA;
+      border: 1px solid #78DCE8;
+      padding: 5px;
+      border-radius: 3px;
+    }
+
+    input[type="submit"] {
+      background-color: #A9DC76;
+      color: #2D2A2E;
+      border: none;
+      padding: 6px 15px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #8fcd50;
+    }
+
+    h1 {
+      margin: 0px 0px 20px 0px;
+      padding: 0px;
+      color: #FFD866;
+      text-align: center;
+    }
+
+    .piece {
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+
+    .no-image {
+      width: 5em;
+      height: 5em;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 80%;
+      border: 1px dashed #78DCE8;
+      box-sizing: border-box;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: .8em;
+      height: .8em;
+      margin-right: .35em;
+      border: 1px solid #FCFCFA;
+      border-radius: 2px;
+    }
+
+    .progress {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+
+    .color-group {
+      clear: both;
+    }
+
+    .color-group h2 {
+      margin: 1em 0 .3em 0;
+      font-size: 120%;
+      color: #AB9DF2;
+    }
+
+    .filtered-out {
+      display: none !important;
+    }
+
+    /* Drop a colour's heading once all of its cards are hidden or filtered out. */
+    .color-group:not(:has(.piece:not(.hidden):not(.filtered-out))) {
+      display: none;
+    }
+
+    .filter {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+
+    #filter-status {
+      margin-left: .5em;
+    }
+
+    input[type="search"] {
+      background-color: #2D2A2E;
+      color: #FCFCFA;
+      border: 1px solid #78DCE8;
+      padding: 5px;
+      border-radius: 3px;
+      width: 16em;
+      max-width: 60vw;
+    }
+
+    .tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .5em;
+      margin-top: 1em;
+      margin-bottom: .5em;
+    }
+
+    .tools .reset {
+      margin-top: 0;
+    }
+
+    .tool-button {
+      background-color: #78DCE8;
+      color: #2D2A2E;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tool-button:hover {
+      background-color: #5ccfdd;
+    }
+
+    /* Search results */
+    .set-results {
+      list-style: none;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 60em;
+    }
+
+    .set-results a {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      padding: .5em;
+      margin-bottom: .3em;
+      border: 1px solid #78DCE8;
+      border-radius: 4px;
+      background-color: #403E41;
+      color: #FCFCFA;
+    }
+
+    .set-results a:hover {
+      text-decoration: none;
+      border-color: #FFD866;
+    }
+
+    .set-results img,
+    .set-results .no-image {
+      width: 6em;
+      height: 4.5em;
+      object-fit: contain;
+      background-color: white;
+      flex: none;
+    }
+
+    .set-results .no-image {
+      background-color: transparent;
+    }
+
+    .set-result-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .set-result-name {
+      font-weight: bold;
+      color: #FFD866;
+    }
+
+    .view-toggle {
+      margin-left: .5em;
+      background-color: #AB9DF2;
+      color: #2D2A2E;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .view-toggle:hover {
+      background-color: #9784ef;
+    }
+
+    /* List view: one row per part, in aligned columns. */
+    .list-header {
+      display: none;
+    }
+
+    .list-view .pieces {
+      display: block;
+      font-size: 80%;
+    }
+
+    .list-view .list-header,
+    .list-view .piece {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      padding: .3em .5em;
+    }
+
+    .list-view .list-header {
+      font-weight: bold;
+      color: #AB9DF2;
+      border-bottom: 2px solid #AB9DF2;
+    }
+
+    .list-view .piece {
+      float: none;
+      font-size: 100%;
+      width: 100%;
+      margin: 0;
+      border-width: 0 0 1px 0;
+      border-radius: 0;
+    }
+
+    .list-view .piece:nth-child(odd) {
+      background-color: #353236;
+    }
+
+    .list-view .list-image,
+    .list-view .piece img,
+    .list-view .no-image {
+      width: 3em;
+      height: 3em;
+      flex: none;
+    }
+
+    .list-view .piece img {
+      object-fit: contain;
+    }
+
+    .list-view .no-image {
+      font-size: 60%;
+      width: 5em;
+      height: 5em;
+    }
+
+    .list-view .piece-info,
+    .list-view .part-details {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1em;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-view .part-num {
+      width: 8em;
+      flex: none;
+      overflow-wrap: anywhere;
+    }
+
+    .list-view .part-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-view .part-color {
+      width: 11em;
+      flex: none;
+    }
+
+    .list-view .part-count {
+      width: 18em;
+      flex: none;
+    }
+
+    /* On narrow screens, stack each part's details instead of using columns. */
+    @media (max-width: 45em) {
+      .list-view .list-header {
+        display: none;
+      }
+
+      .list-view .piece-info,
+      .list-view .part-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+      }
+
+      .list-view .part-num,
+      .list-view .part-color,
+      .list-view .part-count {
+        width: auto;
+      }
+    }
+
+    /* Print in landscape by default. Browsers still let people change this. */
+    @page {
+      size: landscape;
+    }
+
+    @media print {
+      body {
+        background-color: white;
+        color: black;
+        /* The print dialog's Scale can't be set from a page, so shrink the page
+           instead. With the smaller cards above, this matches printing the
+           older, larger cards at 50%. Leave the dialog's Scale at 100%. */
+        zoom: 0.625;
+      }
+
+      h1,
+      .color-group h2 {
+        color: black;
+      }
+
+      .progress,
+      .filter {
+        display: none;
+      }
+
+      .swatch {
+        border-color: #000;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .no-image {
+        border-color: #000;
+      }
+
+      .list-view .list-header {
+        color: black;
+        border-bottom-color: black;
+      }
+
+      .list-view .piece:nth-child(odd) {
+        background-color: #eee;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .color-group h2 {
+        break-after: avoid;
+      }
+
+      .topform {
+        display: none;
+      }
+
+      .piece {
+        border: 1px solid #000;
+        background-color: white;
+        color: black;
+        display: flex;
+        align-items: center;
+      }
+
+      .checkbox input {
+        width: 16px;
+        height: 16px;
+      }
+
+      .reset {
+        display: none;
+      }
+    }
+  </style>

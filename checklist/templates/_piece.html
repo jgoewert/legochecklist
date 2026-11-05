@@ -1,6 +1,6 @@
 <div class="piece">
   {% if piece.img %}
-  <img src="{{ piece.img }}" alt="{{ piece.name }}">
+  <img src="{{ piece.img }}" alt="{{ piece.name }}" loading="lazy" decoding="async">
   {% else %}
   <div class="no-image">No image</div>
   {% endif %}

@@ -413,6 +413,88 @@ class CatalogViewsTestCase(CatalogTestCase):
                 response = self.client.get('/?set_id=1234-1')
         self.assertEqual(response.status_code, 503)
 
+    def test_a_name_lists_matching_sets_linking_to_their_checklists(self):
+        response = self.client.get(
+            '/', {"set_id": "minifigs", "selected_sort": "color"}
+        )
+
+        self.assertContains(response, "Sets matching")
+        self.assertContains(response, "Set With Minifigs")
+        self.assertContains(response, "Only Minifigs")
+        self.assertNotContains(response, "Test Set")
+        self.assertContains(response, 'href="/?set_id=4000-1&amp;selected_sort=color"')
+        self.assertContains(response, "2 sets found.")
+
+    def test_a_search_with_no_matches_returns_404_with_help(self):
+        response = self.client.get('/', {"set_id": "spaceship"})
+
+        self.assertContains(response, "No sets found", status_code=404)
+        self.assertContains(response, 'value="spaceship"', status_code=404)
+
+    def test_long_result_lists_say_how_many_more_there_are(self):
+        search_sets = services.search_sets
+        with patch(
+            "checklist.services.search_sets",
+            side_effect=lambda query: search_sets(query, limit=2),
+        ):
+            response = self.client.get('/', {"set_id": "set"})
+
+        self.assertContains(response, "Showing the newest 2 of 4 sets.")
+
+    def test_pages_are_compressed_for_browsers_that_accept_it(self):
+        response = self.client.get('/?set_id=1234-1', HTTP_ACCEPT_ENCODING="gzip")
+
+        self.assertEqual(response["Content-Encoding"], "gzip")
+        self.assertIn(b"Test Set", gzip.decompress(response.content))
+
+    def test_part_images_load_lazily(self):
+        response = self.client.get('/?set_id=1234-1')
+        self.assertContains(response, 'loading="lazy"')
+
+
+class SearchSetsTestCase(CatalogTestCase):
+    def names(self, query, **kwargs):
+        matches, _ = services.search_sets(query, **kwargs)
+        return [match["name"] for match in matches]
+
+    def test_every_word_must_be_in_the_name(self):
+        self.assertCountEqual(
+            self.names("minifigs"), ["Set With Minifigs", "Only Minifigs"]
+        )
+        self.assertEqual(self.names("ONLY minifigs"), ["Only Minifigs"])
+
+    def test_set_numbers_match_from_the_start(self):
+        self.assertEqual(self.names("1224"), ["Dotted Set"])
+        self.assertEqual(self.names("224"), [])
+
+    def test_wildcards_are_matched_literally(self):
+        for query in ("%", "_", "\\"):
+            with self.subTest(query=query):
+                self.assertEqual(self.names(query), [])
+
+    def test_blank_query_finds_nothing(self):
+        self.assertEqual(services.search_sets("   "), ([], 0))
+
+    def test_limit_caps_matches_but_not_the_total(self):
+        matches, total = services.search_sets("set", limit=2)
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(total, 4)
+
+    def test_matches_include_their_details(self):
+        matches, _ = services.search_sets("dotted")
+        self.assertEqual(
+            matches,
+            [
+                {
+                    "set_num": "1224.1-1",
+                    "name": "Dotted Set",
+                    "year": 2000,
+                    "num_parts": 1,
+                    "img_url": "http://x",
+                }
+            ],
+        )
+
 
 class ViewsTestCase(SimpleTestCase):
     def setUp(self):
@@ -497,11 +579,12 @@ class ViewsTestCase(SimpleTestCase):
         response = self.render_page([("p1", "Brick", "Red", "http://img")])
         self.assertNotContains(response, "<h2>")
 
-    @patch('checklist.services.fetch_set_data')
-    def test_set_id_is_trimmed(self, mock_fetch_set):
-        mock_fetch_set.return_value = (None, None)
+    @patch('checklist.services.search_sets', return_value=([], 0))
+    @patch('checklist.services.fetch_set_data', return_value=(None, None))
+    def test_set_id_is_trimmed(self, mock_fetch_set, mock_search):
         self.client.get('/', {"set_id": " 1234-1 "})
         mock_fetch_set.assert_called_once_with("1234-1")
+        mock_search.assert_called_once_with("1234-1")
 
 
 @unittest.skipUnless(
