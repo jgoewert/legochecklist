@@ -1,5 +1,6 @@
 import logging
 import re
+from dataclasses import dataclass
 
 import requests
 from django.conf import settings
@@ -16,6 +17,15 @@ MAX_SET_ID_LENGTH = 64
 # keeps user input from reaching any other Rebrickable endpoint.
 SET_ID_PATTERN = re.compile(r"[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*")
 VERSION_SUFFIX_PATTERN = re.compile(r"-\d+$")
+
+
+@dataclass
+class Piece:
+    num: str
+    color: str
+    img: str
+    qty: int
+    name: str
 
 
 class InvalidSetId(ValueError):

@@ -3,7 +3,7 @@ import re
 import requests
 from django.conf import settings
 from django.core.cache import cache
-from django.test import TestCase, Client
+from django.test import SimpleTestCase, Client
 from unittest.mock import patch, Mock
 from . import services
 
@@ -15,7 +15,7 @@ def api_response(status_code=200, payload=None):
     return response
 
 
-class SortingTestCase(TestCase):
+class SortingTestCase(SimpleTestCase):
     def test_sort_by_name(self):
         item = {"part": {"name": "Birck"}}
         self.assertEqual(services.sort_by_name(item), "Birck")
@@ -29,7 +29,7 @@ class SortingTestCase(TestCase):
         self.assertEqual(services.sort_by_partnum(item), "3001")
 
 
-class ServicesTestCase(TestCase):
+class ServicesTestCase(SimpleTestCase):
     def setUp(self):
         cache.clear()
 
@@ -163,7 +163,7 @@ class ServicesTestCase(TestCase):
                 self.assertEqual(data["name"], "Test Set")
 
 
-class ViewsTestCase(TestCase):
+class ViewsTestCase(SimpleTestCase):
     def setUp(self):
         self.client = Client()
         cache.clear()
@@ -244,7 +244,7 @@ class ViewsTestCase(TestCase):
         mock_fetch_set.assert_called_once_with("1234-1")
 
 
-class IntegrationTestCase(TestCase):
+class IntegrationTestCase(SimpleTestCase):
     def test_set_1682_1_part_count(self):
         """
         Integration test to verify set 1682-1 has 240 parts using live API.

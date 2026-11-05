@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django.http import HttpResponse    
-from .models import Piece
 from . import services
 
 # Create your views here.
@@ -39,7 +38,7 @@ def index(request, set_id="1682-1", selected_sort="name"):
     set_pieces = []
     for part in sortedresults:
         if (part['is_spare'] is not True):
-            piece = Piece(
+            piece = services.Piece(
                 num=part["part"]["part_num"], 
                 color=part["color"]["name"], 
                 img=part["part"]["part_img_url"], 
