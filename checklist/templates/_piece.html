@@ -5,12 +5,12 @@
   <div class="no-image">No image</div>
   {% endif %}
   <div class="piece-info">
-    <div>
-      <div>{{ piece.num }}</div>
-      <div>{{ piece.name }}</div>
-      <div>{% if piece.color_rgb %}<span class="swatch" style="background-color: #{{ piece.color_rgb }}"></span>{% endif %}{{ piece.color }}</div>
+    <div class="part-details">
+      <div class="part-num">{{ piece.num }}</div>
+      <div class="part-name">{{ piece.name }}</div>
+      <div class="part-color">{% if piece.color_rgb %}<span class="swatch" style="background-color: #{{ piece.color_rgb }}"></span>{% endif %}{{ piece.color }}</div>
     </div>
-    <div>{{ piece.qty }}
+    <div class="part-count">{{ piece.qty }}
       {% for boxes in "x"|ljust:piece.qty %}
       <span class="checkbox"><input type="checkbox"
           aria-label="{{ piece.name }}, {{ piece.color }}, {{ forloop.counter }} of {{ piece.qty }}"

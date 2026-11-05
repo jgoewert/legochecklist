@@ -29,6 +29,7 @@
 
     .piece {
       float: left;
+      font-size: 80%;
       border: solid 1px #78DCE8;
       background-color: #403E41;
       padding: .3em;
@@ -37,7 +38,7 @@
       border-radius: 4px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: .6em;
     }
 
     .piece-info {
@@ -53,7 +54,7 @@
     }
 
     .hidden {
-      display: none;
+      display: none !important;
     }
 
     .reset {
@@ -169,10 +170,140 @@
       display: none;
     }
 
+    .view-toggle {
+      margin-left: .5em;
+      background-color: #AB9DF2;
+      color: #2D2A2E;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .view-toggle:hover {
+      background-color: #9784ef;
+    }
+
+    /* List view: one row per part, in aligned columns. */
+    .list-header {
+      display: none;
+    }
+
+    .list-view .pieces {
+      display: block;
+      font-size: 80%;
+    }
+
+    .list-view .list-header,
+    .list-view .piece {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      padding: .3em .5em;
+    }
+
+    .list-view .list-header {
+      font-weight: bold;
+      color: #AB9DF2;
+      border-bottom: 2px solid #AB9DF2;
+    }
+
+    .list-view .piece {
+      float: none;
+      font-size: 100%;
+      width: 100%;
+      margin: 0;
+      border-width: 0 0 1px 0;
+      border-radius: 0;
+    }
+
+    .list-view .piece:nth-child(odd) {
+      background-color: #353236;
+    }
+
+    .list-view .list-image,
+    .list-view .piece img,
+    .list-view .no-image {
+      width: 3em;
+      height: 3em;
+      flex: none;
+    }
+
+    .list-view .piece img {
+      object-fit: contain;
+    }
+
+    .list-view .no-image {
+      font-size: 60%;
+      width: 5em;
+      height: 5em;
+    }
+
+    .list-view .piece-info,
+    .list-view .part-details {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1em;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-view .part-num {
+      width: 8em;
+      flex: none;
+      overflow-wrap: anywhere;
+    }
+
+    .list-view .part-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-view .part-color {
+      width: 11em;
+      flex: none;
+    }
+
+    .list-view .part-count {
+      width: 18em;
+      flex: none;
+    }
+
+    /* On narrow screens, stack each part's details instead of using columns. */
+    @media (max-width: 45em) {
+      .list-view .list-header {
+        display: none;
+      }
+
+      .list-view .piece-info,
+      .list-view .part-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+      }
+
+      .list-view .part-num,
+      .list-view .part-color,
+      .list-view .part-count {
+        width: auto;
+      }
+    }
+
+    /* Print in landscape by default. Browsers still let people change this. */
+    @page {
+      size: landscape;
+    }
+
     @media print {
       body {
         background-color: white;
         color: black;
+        /* The print dialog's Scale can't be set from a page, so shrink the page
+           instead. With the smaller cards above, this matches printing the
+           older, larger cards at 50%. Leave the dialog's Scale at 100%. */
+        zoom: 0.625;
       }
 
       h1,
@@ -192,6 +323,17 @@
 
       .no-image {
         border-color: #000;
+      }
+
+      .list-view .list-header {
+        color: black;
+        border-bottom-color: black;
+      }
+
+      .list-view .piece:nth-child(odd) {
+        background-color: #eee;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
       }
 
       .color-group h2 {
@@ -222,6 +364,33 @@
   </style>
   <script>
     const HIDE_SETTING_KEY = 'legochecklist-hideondone';
+    const VIEW_SETTING_KEY = 'legochecklist-view';
+
+    function saved_view() {
+      try {
+        return localStorage.getItem(VIEW_SETTING_KEY) === 'list' ? 'list' : 'tiles';
+      } catch (e) {
+        return 'tiles';
+      }
+    }
+    function apply_view(view) {
+      const list = view === 'list';
+      document.body.classList.toggle('list-view', list);
+      const button = document.getElementById('viewtoggle');
+      if (button) {
+        button.textContent = list ? 'Tile view' : 'List view';
+        button.setAttribute('aria-pressed', list);
+      }
+    }
+    function toggle_view() {
+      const view = document.body.classList.contains('list-view') ? 'tiles' : 'list';
+      apply_view(view);
+      try {
+        localStorage.setItem(VIEW_SETTING_KEY, view);
+      } catch (e) {
+        // The view still changes; it just isn't remembered.
+      }
+    }
 
     function piece_checkboxes(root) {
       return Array.from(root.querySelectorAll('.piece-info input[type="checkbox"]'));
@@ -288,6 +457,7 @@
       document.getElementById('topform').submit();
     }
     function start() {
+      apply_view(saved_view());
       document.getElementById("hideondone").checked = localStorage.getItem(HIDE_SETTING_KEY) === 'true';
       restore_checkbox_values();
       update_progress();
@@ -319,12 +489,18 @@
         <option value="name" {% if set_sort == 'name' %} selected{% endif %}>Name</option>
         <option value="color" {% if set_sort == 'color' %} selected{% endif %}>Color</option>
         <option value="partnum" {% if set_sort == 'partnum' %} selected{% endif %}>PartNum</option>
-      </select><br />
+      </select>
+      <button type="button" class="view-toggle" id="viewtoggle" aria-pressed="false"
+        onclick="toggle_view()">List view</button><br />
     </form>
     <input class="reset" type="reset" onclick="reset()" value="Reset (clear all checkboxes on this page!)"></input>
     Data provided by <a href="https://rebrickable.com/downloads/">Rebrickable</a> - <a
       href="https://github.com/jgoewert/legochecklist">Source Code at GitHub</a>
   </div>
+  <script>
+    // Applied before the pieces render, so the saved view shows without a flash.
+    apply_view(saved_view());
+  </script>
   <h1>{{ set_id }} : {{ set_name }}</h1>
   <div class="progress" id="progress" aria-live="polite"></div>
   {% if set_sort == 'color' %}
@@ -333,6 +509,7 @@
   <section class="color-group">
     <h2>{{ group.grouper }}</h2>
     <div class="pieces clearfix">
+      {% include "_list_header.html" %}
       {% for piece in group.list %}
       {% include "_piece.html" %}
       {% endfor %}
@@ -341,6 +518,7 @@
   {% endfor %}
   {% else %}
   <div class="pieces clearfix">
+    {% include "_list_header.html" %}
     {% for piece in set_pieces %}
     {% include "_piece.html" %}
     {% endfor %}
