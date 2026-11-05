@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import URLError
 
 from django.conf import settings
 from django.core.management import call_command
@@ -263,6 +264,119 @@ class BuildCatalogTestCase(CatalogTestCase):
         data, _ = services.fetch_set_data("1234-1")
         self.assertEqual(data["name"], "Test Set")
         self.assertFalse(self.catalog.with_name("catalog.sqlite3.tmp").exists())
+
+
+def gzipped(content):
+    return gzip.compress(content.encode("utf-8"))
+
+
+class DownloadCatalogTestCase(CatalogTestCase):
+    """build_catalog --download, with the network replaced by fixture files."""
+
+    def setUp(self):
+        self.addCleanup(self.build_committed)
+        self.requests = []
+
+    def build_committed(self):
+        call_command("build_catalog", csv_dir=self.csv_dir, stdout=io.StringIO())
+
+    def serve(self, files):
+        """Answers each request with the matching entry in files, or its exception."""
+
+        def fake_urlopen(request, timeout):
+            self.requests.append(request)
+            body = files[request.full_url.rsplit("/", 1)[1]]
+            if isinstance(body, Exception):
+                raise body
+            return io.BytesIO(body)
+
+        return patch(
+            "checklist.management.commands.build_catalog.urlopen",
+            side_effect=fake_urlopen,
+        )
+
+    def downloaded_files(self, name="Downloaded Set"):
+        return {
+            f"{table}.csv.gz": gzipped(content.replace("Test Set", name))
+            for table, content in CSV_FIXTURES.items()
+        }
+
+    def run_download(self, files, csv_dir=None, **options):
+        stderr = io.StringIO()
+        with self.serve(files):
+            call_command(
+                "build_catalog",
+                csv_dir=csv_dir or self.csv_dir,
+                download=True,
+                stdout=io.StringIO(),
+                stderr=stderr,
+                **options,
+            )
+        return stderr.getvalue()
+
+    def set_name(self):
+        data, _ = services.fetch_set_data("1234-1")
+        return data["name"]
+
+    def test_builds_from_the_downloaded_files(self):
+        stderr = self.run_download(self.downloaded_files())
+
+        self.assertEqual(self.set_name(), "Downloaded Set")
+        self.assertEqual(stderr, "")
+
+    def test_requests_each_file_and_identifies_itself(self):
+        self.run_download(self.downloaded_files())
+
+        self.assertEqual(
+            [request.full_url for request in self.requests],
+            [
+                f"https://cdn.rebrickable.com/media/downloads/{table}.csv.gz"
+                for table in CSV_FIXTURES
+            ],
+        )
+        self.assertIn("legochecklist", self.requests[0].get_header("User-agent"))
+
+    def test_network_error_falls_back_to_the_committed_files(self):
+        files = self.downloaded_files()
+        files["parts.csv.gz"] = URLError("down")
+
+        stderr = self.run_download(files)
+
+        self.assertEqual(self.set_name(), "Test Set")
+        self.assertIn("building from", stderr)
+
+    def test_corrupt_download_falls_back_to_the_committed_files(self):
+        files = self.downloaded_files()
+        files["inventory_parts.csv.gz"] = files["inventory_parts.csv.gz"][:20]
+
+        stderr = self.run_download(files)
+
+        self.assertEqual(self.set_name(), "Test Set")
+        self.assertIn("building from", stderr)
+
+    def test_much_smaller_download_falls_back_to_the_committed_files(self):
+        committed = self.temp_dir / "committed-gz"
+        committed.mkdir()
+        for table, content in CSV_FIXTURES.items():
+            (committed / f"{table}.csv.gz").write_bytes(
+                gzipped(content.replace("Test Set", "Committed Set"))
+            )
+        files = self.downloaded_files()
+        files["sets.csv.gz"] = gzipped("set_num,name\n1234-1,Downloaded Set\n")
+
+        stderr = self.run_download(files, csv_dir=committed)
+
+        self.assertEqual(self.set_name(), "Committed Set")
+        self.assertIn("much smaller", stderr)
+
+    def test_strict_fails_and_keeps_the_existing_catalog(self):
+        files = self.downloaded_files()
+        files["sets.csv.gz"] = URLError("down")
+
+        with self.assertRaisesMessage(CommandError, "Could not use downloaded data"):
+            self.run_download(files, strict=True)
+
+        self.assertEqual(self.set_name(), "Test Set")
 
 
 class CatalogViewsTestCase(CatalogTestCase):
